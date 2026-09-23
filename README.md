@@ -1,6 +1,8 @@
-# Smart Bus Tracker Display
+# UK Public Transport Data
 
-A compact Wi-Fi display for homes, workplaces and public spaces that shows nearby bus departures, live vehicle status and delay information.
+An early-stage UK public-transport data project, beginning with Rugby bus and
+rail departures. It collects reliable scheduled and live data that can later
+power a Wi-Fi display, website, or API.
 
 ## Pilot: Rugby Rail Station
 
@@ -65,18 +67,36 @@ BODS live vehicles ──────┘
 2. Put your BODS API key in `BODS_API_KEY`.
 3. Never commit `.env` or an API key.
 
-## Next build steps
+## Train data: Rugby station
 
-1. Download and normalise the timetable for services 1 and 2.
-2. Poll and cache BODS live positions every 15–30 seconds.
-3. Implement an endpoint that returns the JSON display response above.
-4. Build a browser display simulator.
-5. Connect the same endpoint to an ESP32-S3 display.
+National Rail's Darwin feed has been tested successfully for Rugby station
+(`RUGBY`). The downloaded snapshot includes:
 
-## Railway data pilot
+- scheduled and expected departure times;
+- platforms;
+- train service and journey identifiers;
+- operator codes; and
+- origin and destination station codes.
 
-The repository also includes a Darwin snapshot and live-topic poller. With the
-Darwin fields set in `.env`, run:
+This is enough to build a real departure board and surface disruptions. In the
+test snapshot, a Glasgow Central to London Euston service scheduled at Rugby
+for 21:32 was forecast to depart at 21:55 from platform 4.
+
+### How the railway feed works
+
+```text
+Darwin SFTP snapshot ──> complete Rugby departure board
+Darwin STOMP live topic ─> incremental delay, platform and service updates
+                              └──> normalised public-transport data API
+```
+
+The snapshot provides a complete starting state. The live topic is then used to
+keep that state current between refreshes. See [the Darwin pilot notes](docs/darwin-pilot.md)
+for the tested result and integration approach.
+
+### Run the railway poller
+
+With the Darwin fields set in `.env`:
 
 ```bash
 npm install
@@ -84,10 +104,18 @@ npm run darwin:snapshot
 npm run darwin:topic
 ```
 
-The snapshot command writes a normalised Rugby departure board to
-`data/darwin/rugby-departures.json`; the topic command records the count and
-timestamps of incremental Darwin updates. These generated files are ignored by
-Git.
+`darwin:snapshot` writes a normalised Rugby departure board to
+`data/darwin/rugby-departures.json`. `darwin:topic` records the count and
+timestamps of incremental Darwin updates. Generated data is ignored by Git.
+
+## Next build steps
+
+1. Download and normalise the timetable for services 1 and 2.
+2. Poll and cache BODS live positions every 15–30 seconds.
+3. Refresh and cache the Darwin snapshot, applying live-topic updates between
+   refreshes.
+4. Implement a unified bus-and-rail departure endpoint.
+5. Build a browser display simulator.
 
 ## Notes
 

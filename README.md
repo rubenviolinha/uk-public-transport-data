@@ -121,4 +121,9 @@ timestamps of incremental Darwin updates. Generated data is ignored by Git.
 
 - The initial proof query returned live Stagecoach Midlands vehicles for Rugby, including routes 1, 2, 4, 8, 25A, 63, 84, 85, 86, 96S and D1.
 - Raw upstream data may contain fields that should not be exposed to devices or stored unnecessarily. The backend should retain only the journey and vehicle data needed to calculate departures.
-- Attribution and usage requirements from BODS must be checked before release.
+- See [data sources and attribution](docs/data-sources.md) before release or redistribution.
+
+## Contributing and security
+
+Read [CONTRIBUTING.md](CONTRIBUTING.md) for local setup and contribution rules,
+and [SECURITY.md](SECURITY.md) to report vulnerabilities or exposed credentials.

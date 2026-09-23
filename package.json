@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "check": "node --check scripts/darwin-poller.mjs",
     "darwin:snapshot": "node scripts/darwin-poller.mjs snapshot",
     "darwin:topic": "node scripts/darwin-poller.mjs topic",
     "darwin:watch": "node scripts/darwin-poller.mjs watch"

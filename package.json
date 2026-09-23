@@ -1,0 +1,14 @@
+{
+  "name": "uk-public-transport-data",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "darwin:snapshot": "node scripts/darwin-poller.mjs snapshot",
+    "darwin:topic": "node scripts/darwin-poller.mjs topic",
+    "darwin:watch": "node scripts/darwin-poller.mjs watch"
+  },
+  "dependencies": {
+    "ssh2": "^1.16.0"
+  }
+}

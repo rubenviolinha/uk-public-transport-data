@@ -73,6 +73,22 @@ BODS live vehicles ──────┘
 4. Build a browser display simulator.
 5. Connect the same endpoint to an ESP32-S3 display.
 
+## Railway data pilot
+
+The repository also includes a Darwin snapshot and live-topic poller. With the
+Darwin fields set in `.env`, run:
+
+```bash
+npm install
+npm run darwin:snapshot
+npm run darwin:topic
+```
+
+The snapshot command writes a normalised Rugby departure board to
+`data/darwin/rugby-departures.json`; the topic command records the count and
+timestamps of incremental Darwin updates. These generated files are ignored by
+Git.
+
 ## Notes
 
 - The initial proof query returned live Stagecoach Midlands vehicles for Rugby, including routes 1, 2, 4, 8, 25A, 63, 84, 85, 86, 96S and D1.

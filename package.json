@@ -9,6 +9,7 @@
     "display": "node src/server.mjs",
     "display:poll": "node scripts/display-poller.mjs once",
     "display:watch": "node scripts/display-poller.mjs watch",
+    "display:validate": "node scripts/validate-display.mjs",
     "darwin:snapshot": "node scripts/darwin-poller.mjs snapshot",
     "darwin:topic": "node scripts/darwin-poller.mjs topic",
     "darwin:watch": "node scripts/darwin-poller.mjs watch"

@@ -95,6 +95,12 @@ npm run display
 
 For continuous cache refresh, use `npm run display:watch`. If an upstream request fails, the last successful cache is retained and marked `stale: true`, so the display can keep showing known data instead of going blank.
 
+### Validate a pilot run
+
+The ESP32 sketch uses `TFT_eSPI`; configure that library for the selected 4–5 inch module, then upload `firmware/esp32/display_client.ino`. It renders the stop, freshness state, route, expected time, destination and delay on the TFT and retains the last good frame when refresh fails.
+
+With the API running, `npm run display:validate` records one sample. Set `VALIDATION_DURATION_SECONDS` and `VALIDATION_INTERVAL_SECONDS` for a longer run; samples are written as JSON Lines to `data/validation/display-samples.jsonl` and include latency, stale state, departure count, HTTP status and errors.
+
 ## Local setup
 
 1. Copy `.env.example` to `.env`.

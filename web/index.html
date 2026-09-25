@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Smart Bus Tracker Display</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+  <main class="display" aria-live="polite">
+    <header><div><p class="eyebrow">SMART BUS TRACKER</p><h1 id="stop">Loading…</h1><p id="direction" class="muted"></p></div><div id="clock" class="clock"></div></header>
+    <p id="status" class="status">Connecting…</p><section id="departures" class="departures"></section>
+    <footer><span id="freshness"></span><button id="setup">Configure display</button></footer>
+  </main>
+  <dialog id="configDialog"><form method="dialog" id="configForm"><h2>Configure display</h2><label>Device ID<input name="deviceId" value="demo-display" required></label><label>Stop name<input name="stopName" value="Rugby Rail Station (Adj)" required></label><label>Stop ID<input name="stopId" value="4200F057700" required></label><label>Route (optional)<input name="route" placeholder="Any route"></label><label>Direction<input name="direction" value="Northbound"></label><div class="actions"><button value="cancel">Cancel</button><button value="save">Save configuration</button></div><p id="configError" class="error"></p></form></dialog>
+  <script type="module" src="/app.js"></script>
+</body></html>

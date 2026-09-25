@@ -61,6 +61,28 @@ BODS live vehicles ──────┘
 }
 ```
 
+## Display MVP
+
+The repository includes a runnable display vertical slice:
+
+- `src/server.mjs` serves a device-facing JSON API and the browser simulator.
+- `web/` contains the compact always-on display and configuration dialog.
+- `firmware/esp32/display_client.ino` is the ESP32-S3 reference client. It keeps the last good display state when Wi-Fi or the API is unavailable.
+- `data/fixtures/display.json` provides deterministic bus-and-rail fixture data for local development.
+- `test/display.test.mjs` verifies the display contract, filtering and configuration validation.
+
+Run it locally with:
+
+```bash
+npm install
+npm test
+npm run display
+```
+
+Open <http://localhost:8787>. The simulator supports a configured stop, route and direction through **Configure display**. The API exposes `POST /api/v1/provision`, `GET/PUT /api/v1/devices/:deviceId/config` and `GET /api/v1/display?deviceId=...`.
+
+Set `DISPLAY_DATA_FILE` to a normalised cached data file when connecting the API to a real poller. Runtime device configuration is written under `data/config/`, which is ignored because it contains device-specific state.
+
 ## Local setup
 
 1. Copy `.env.example` to `.env`.
@@ -114,8 +136,9 @@ timestamps of incremental Darwin updates. Generated data is ignored by Git.
 2. Poll and cache BODS live positions every 15–30 seconds.
 3. Refresh and cache the Darwin snapshot, applying live-topic updates between
    refreshes.
-4. Implement a unified bus-and-rail departure endpoint.
-5. Build a browser display simulator.
+4. Connect the display API to the live BODS bus cache and Darwin snapshot/topic updater.
+5. Add a hardware-specific renderer for the selected ESP32 display module.
+6. Run the multi-day Rugby pilot and record freshness, delay accuracy and recovery results.
 
 ## Notes
 

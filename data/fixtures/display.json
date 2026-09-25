@@ -1,0 +1,11 @@
+{
+  "generatedAt": "2026-09-25T07:00:00+01:00",
+  "freshness": "fixture",
+  "stale": false,
+  "departures": [
+    { "line": "2", "destination": "Rugby Gateway", "scheduledTime": "07:13", "expectedTime": "07:16", "delayMinutes": 3, "status": "live" },
+    { "line": "1", "destination": "Merlin Close", "scheduledTime": "07:43", "expectedTime": "07:43", "delayMinutes": 0, "status": "scheduled" },
+    { "line": "4", "destination": "Brownsover", "scheduledTime": "08:02", "expectedTime": "08:05", "delayMinutes": 3, "status": "delayed" },
+    { "line": "D", "destination": "London Euston", "scheduledTime": "08:17", "expectedTime": "08:17", "delayMinutes": 0, "status": "scheduled", "platform": "4" }
+  ]
+}

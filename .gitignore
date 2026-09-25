@@ -6,7 +6,7 @@ node_modules/
 data/darwin/
 
 # Runtime/cache data
-data/
+data/config/
 cache/
 *.sqlite
 *.db

@@ -83,6 +83,18 @@ Open <http://localhost:8787>. The simulator supports a configured stop, route an
 
 Set `DISPLAY_DATA_FILE` to a normalised cached data file when connecting the API to a real poller. Runtime device configuration is written under `data/config/`, which is ignored because it contains device-specific state.
 
+### Connect live bus and rail data
+
+`display:poll` merges a normalised BODS departures response with the Darwin board written by `darwin:snapshot`. Configure `BODS_DEPARTURES_URL` and the optional `BODS_API_KEY`, then run:
+
+```bash
+npm run darwin:snapshot
+npm run display:poll
+npm run display
+```
+
+For continuous cache refresh, use `npm run display:watch`. If an upstream request fails, the last successful cache is retained and marked `stale: true`, so the display can keep showing known data instead of going blank.
+
 ## Local setup
 
 1. Copy `.env.example` to `.env`.

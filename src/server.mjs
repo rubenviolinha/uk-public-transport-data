@@ -1,12 +1,13 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, resolve } from 'node:path';
+import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { buildDisplayResponse, defaultConfig, loadConfigStore, readJson, validateConfig, writeJson } from './display-contract.mjs';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const port = Number(process.env.PORT ?? 8787);
-const fixtureFile = resolve(process.env.DISPLAY_DATA_FILE ?? join(root, 'data', 'fixtures', 'display.json'));
+const fixtureFile = resolve(process.env.DISPLAY_DATA_FILE ?? (existsSync(join(root, 'data', 'cache', 'display.json')) ? join(root, 'data', 'cache', 'display.json') : join(root, 'data', 'fixtures', 'display.json')));
 const configFile = resolve(process.env.DISPLAY_CONFIG_FILE ?? join(root, 'data', 'config', 'devices.json'));
 const staticRoot = join(root, 'web');
 let configs = loadConfigStore(configFile);

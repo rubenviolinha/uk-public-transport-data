@@ -102,7 +102,7 @@ export function normaliseDepartures(source, provider = 'bus') {
     const scheduledTime = item.scheduledTime ?? item.scheduled ?? item.departureTime ?? item.aimedDepartureTime ?? null;
     const expectedTime = item.expectedTime ?? item.expected ?? item.predictedDepartureTime ?? item.estimatedDepartureTime ?? scheduledTime;
     const delayMinutes = Number.isFinite(Number(item.delayMinutes)) ? Number(item.delayMinutes) : minutesBetween(scheduledTime, expectedTime);
-    return { mode: item.mode ?? provider, line: String(item.line ?? item.route ?? item.service ?? item.serviceId ?? '—'), serviceId: item.serviceId ?? null, destination: item.destination ?? item.destinationName ?? item.headsign ?? 'Unknown destination', scheduledTime, expectedTime, delayMinutes, status: item.status ?? (item.cancelled ? 'cancelled' : expectedTime !== scheduledTime ? 'live' : 'scheduled'), platform: item.platform ?? null, stopId: item.stopId ?? item.atcoCode ?? item.station ?? null, direction: item.direction ?? item.directionName ?? null };
+    return { mode: item.mode ?? provider, line: String(item.line ?? item.route ?? item.service ?? item.serviceId ?? item.tripId ?? '—'), serviceId: item.serviceId ?? item.tripId ?? null, destination: item.destination ?? item.destinationName ?? item.headsign ?? 'Unknown destination', scheduledTime, expectedTime, delayMinutes, status: item.status ?? (item.cancelled ? 'cancelled' : expectedTime !== scheduledTime ? 'live' : 'scheduled'), platform: item.platform ?? null, stopId: item.stopId ?? item.atcoCode ?? item.station ?? null, direction: item.direction ?? item.directionName ?? null };
   }).filter((item) => item.scheduledTime);
 }
 

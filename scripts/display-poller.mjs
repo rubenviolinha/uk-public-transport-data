@@ -2,12 +2,15 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadDotEnv } from '../src/env.mjs';
+import { mergeScheduledDepartures } from '../src/schedule-data.mjs';
 import { mergeTransportData, parseGtfsRealtimeDepartures, parseSiriVmDepartures, readDarwinBoard, writeDisplayCache } from '../src/transport-data.mjs';
+import { readJson } from '../src/display-contract.mjs';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 loadDotEnv(join(root, '.env'));
 const cacheFile = resolve(process.env.DISPLAY_DATA_FILE ?? join(root, 'data', 'cache', 'display.json'));
 const darwinFile = resolve(process.env.DARWIN_BOARD_FILE ?? join(root, 'data', 'darwin', 'rugby-departures.json'));
+const timetableFile = resolve(process.env.BODS_TIMETABLE_FILE ?? join(root, 'data', 'timetables', 'rugby.json'));
 const busUrl = process.env.BODS_DEPARTURES_URL;
 
 async function fetchBus() {
@@ -25,8 +28,9 @@ async function fetchBus() {
 
 async function poll() {
   try {
-    if (!busUrl && !existsSync(darwinFile)) throw new Error('No transport sources configured; set BODS_DEPARTURES_URL or run darwin:snapshot first');
-    const bus = await fetchBus();
+    const timetable = existsSync(timetableFile) ? readJson(timetableFile, { departures: [] }) : null;
+    if (!busUrl && !existsSync(darwinFile) && !timetable) throw new Error('No transport sources configured; set BODS_DEPARTURES_URL, BODS_TIMETABLE_FILE, or run darwin:snapshot first');
+    const bus = mergeScheduledDepartures(await fetchBus(), timetable ?? { departures: [] });
     const rail = existsSync(darwinFile) ? readDarwinBoard(darwinFile) : { departures: [] };
     const result = mergeTransportData({ bus, rail, generatedAt: new Date().toISOString() });
     writeDisplayCache(cacheFile, result);

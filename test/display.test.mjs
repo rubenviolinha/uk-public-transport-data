@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import GtfsRealtimeBindings from 'gtfs-realtime-bindings';
 import { buildDisplayResponse, validateConfig } from '../src/display-contract.mjs';
 import { hasValidBearerToken } from '../src/auth.mjs';
+import { mergeScheduledDepartures } from '../src/schedule-data.mjs';
 import { mergeTransportData, normaliseDepartures, parseGtfsRealtimeDepartures, parseSiriVmDepartures } from '../src/transport-data.mjs';
 
 const data = { generatedAt: '2026-09-25T07:00:00Z', freshness: 'fixture', departures: [{ line: '2', destination: 'Rugby Gateway', scheduledTime: '07:13', expectedTime: '07:16', delayMinutes: 3, status: 'live', stopId: 's1', direction: 'Northbound' }, { line: '1', destination: 'Merlin Close', scheduledTime: '07:43', delayMinutes: 0, status: 'scheduled', stopId: 's1', direction: 'Northbound' }] };
@@ -78,4 +79,18 @@ test('parses a GTFS-RT trip update into a delayed departure', () => {
   assert.equal(departure.serviceId, 'trip-2');
   assert.equal(departure.delayMinutes, 3);
   assert.equal(departure.direction, '1');
+});
+
+test('matches live trip data to the static timetable and keeps unmatched services', () => {
+  const result = mergeScheduledDepartures(
+    { departures: [{ tripId: 'trip-2', route: '2', stopId: 's1', direction: 'Northbound', scheduledTime: '2026-09-27T07:13:00Z', expectedTime: '2026-09-27T07:16:00Z', delayMinutes: 3 }] },
+    { departures: [
+      { tripId: 'trip-2', route: '2', stopId: 's1', direction: 'Northbound', destination: 'Rugby Gateway', scheduledTime: '2026-09-27T07:13:00Z' },
+      { route: '1', stopId: 's1', direction: 'Northbound', destination: 'Merlin Close', scheduledTime: '2026-09-27T07:43:00Z' }
+    ] }
+  );
+  assert.equal(result.length, 2);
+  assert.equal(result[0].destination, 'Rugby Gateway');
+  assert.equal(result[0].delayMinutes, 3);
+  assert.equal(result[1].status, 'scheduled');
 });

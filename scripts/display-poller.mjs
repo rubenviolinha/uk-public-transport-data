@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadDotEnv } from '../src/env.mjs';
-import { mergeTransportData, readDarwinBoard, writeDisplayCache } from '../src/transport-data.mjs';
+import { mergeTransportData, parseSiriVmDepartures, readDarwinBoard, writeDisplayCache } from '../src/transport-data.mjs';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 loadDotEnv(join(root, '.env'));
@@ -14,7 +14,9 @@ async function fetchBus() {
   if (!busUrl) return { departures: [] };
   const response = await fetch(busUrl, { headers: process.env.BODS_API_KEY ? { 'x-api-key': process.env.BODS_API_KEY, authorization: `Bearer ${process.env.BODS_API_KEY}` } : undefined });
   if (!response.ok) throw new Error(`BODS request failed: ${response.status}`);
-  return response.json();
+  const payload = await response.text();
+  if ((response.headers.get('content-type') ?? '').includes('json') || payload.trim().startsWith('{') || payload.trim().startsWith('[')) return JSON.parse(payload);
+  return { departures: parseSiriVmDepartures(payload, process.env.BODS_STOP_ID ?? null) };
 }
 
 async function poll() {

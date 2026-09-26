@@ -85,7 +85,7 @@ Set `DISPLAY_DATA_FILE` to a normalised cached data file when connecting the API
 
 ### Connect live bus and rail data
 
-`display:poll` loads `.env`, merges a normalised BODS departures response with the Darwin board written by `darwin:snapshot`, and writes the display cache. `BODS_DEPARTURES_URL` must point to an endpoint returning the normalised shape documented in `.env.example`; raw BODS timetable/live-vehicle ingestion is still a follow-up. Configure the URL and optional `BODS_API_KEY`, then run:
+`display:poll` loads `.env`, merges BODS departures with the Darwin board written by `darwin:snapshot`, and writes the display cache. `BODS_DEPARTURES_URL` may return the normalised JSON shape documented in `.env.example` or a raw SIRI-VM XML response; the latter is parsed into stop departures using `BODS_STOP_ID`. Full timetable matching and GTFS-RT ingestion remain follow-ups. Configure the URL and optional `BODS_API_KEY`, then run:
 
 ```bash
 npm run darwin:snapshot
@@ -139,10 +139,10 @@ Darwin STOMP live topic ─> incremental delay, platform and service updates
                               └──> normalised public-transport data API
 ```
 
-The snapshot provides a complete starting state. The current topic command records
-incremental message health but does not yet apply those updates to the cached
-departure board; that merge is a remaining integration task. See [the Darwin pilot
-notes](docs/darwin-pilot.md) for the tested result and integration approach.
+The snapshot provides a complete starting state. The topic command applies parsed
+Darwin XML updates to the cached departure board and records message/parse health.
+See [the Darwin pilot notes](docs/darwin-pilot.md) for the tested result and
+integration approach.
 
 ### Run the railway poller
 
@@ -160,10 +160,9 @@ timestamps of incremental Darwin updates. Generated data is ignored by Git.
 
 ## Next build steps
 
-1. Complete raw BODS timetable/live-vehicle ingestion and journey matching.
-2. Apply Darwin live-topic updates to the cached departure board.
-3. Run the multi-day Rugby pilot and record freshness, delay accuracy and recovery results.
-4. Add authentication/HTTPS and device authorisation before exposing the API beyond a trusted LAN.
+1. Add BODS timetable matching and GTFS-RT ingestion for journey-level predictions.
+2. Run the multi-day Rugby pilot and record freshness, delay accuracy and recovery results.
+3. Add HTTPS and customer-level API/device authorisation before exposing the service beyond a trusted LAN.
 
 ## Notes
 

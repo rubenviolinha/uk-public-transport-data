@@ -8,6 +8,44 @@ function asArray(value) {
   return [];
 }
 
+function decodeXml(value) {
+  return value.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'");
+}
+
+function xmlText(block, name) {
+  const match = block.match(new RegExp(`<(?:[A-Za-z0-9_.-]+:)?${name}\\b[^>]*>([\\s\\S]*?)</(?:[A-Za-z0-9_.-]+:)?${name}>`));
+  return match ? decodeXml(match[1].trim()) : null;
+}
+
+function xmlBlock(block, name) {
+  const match = block.match(new RegExp(`<(?:[A-Za-z0-9_.-]+:)?${name}\\b[^>]*>([\\s\\S]*?)</(?:[A-Za-z0-9_.-]+:)?${name}>`));
+  return match?.[1] ?? '';
+}
+
+export function parseSiriVmDepartures(xml, stopId = null) {
+  const visits = [...xml.matchAll(/<(?:[A-Za-z0-9_.-]+:)?MonitoredStopVisit\b[^>]*>([\s\S]*?)<\/(?:[A-Za-z0-9_.-]+:)?MonitoredStopVisit>/g)];
+  return visits.map((visit) => {
+    const body = visit[1];
+    const journey = xmlBlock(body, 'MonitoredVehicleJourney');
+    const call = xmlBlock(journey, 'MonitoredCall');
+    const currentStopId = xmlText(call, 'StopPointRef') ?? xmlText(body, 'MonitoringRef');
+    const scheduledTime = xmlText(call, 'AimedDepartureTime') ?? xmlText(call, 'AimedArrivalTime');
+    const expectedTime = xmlText(call, 'ExpectedDepartureTime') ?? xmlText(call, 'ExpectedArrivalTime') ?? scheduledTime;
+    return {
+      mode: 'bus',
+      line: xmlText(journey, 'PublishedLineName') ?? xmlText(journey, 'LineRef') ?? '—',
+      serviceId: xmlText(journey, 'VehicleJourneyRef'),
+      destination: xmlText(journey, 'DestinationName') ?? 'Unknown destination',
+      scheduledTime,
+      expectedTime,
+      delayMinutes: minutesBetween(scheduledTime, expectedTime),
+      status: expectedTime !== scheduledTime ? 'live' : 'scheduled',
+      stopId: currentStopId,
+      direction: xmlText(journey, 'DirectionRef')
+    };
+  }).filter((departure) => departure.scheduledTime && (!stopId || departure.stopId === stopId));
+}
+
 function minutesBetween(scheduled, expected) {
   const parse = (value) => { const match = String(value ?? '').match(/^(\d{1,2}):(\d{2})/); return match ? Number(match[1]) * 60 + Number(match[2]) : NaN; };
   const scheduledMinutes = parse(scheduled); const expectedMinutes = parse(expected);

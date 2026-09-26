@@ -4,6 +4,7 @@ import { mkdir, rename } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { connect as connectTls } from 'node:tls';
 import { gunzipSync } from 'node:zlib';
+import { mergeDarwinDepartures, parseDarwinDepartures } from '../src/darwin-data.mjs';
 import { loadDotEnv } from '../src/env.mjs';
 
 const projectRoot = process.cwd();
@@ -16,56 +17,6 @@ const station = process.env.DARWIN_STATION ?? 'RUGBY';
 function requireEnv(...names) {
   const missing = names.filter((name) => !process.env[name] || process.env[name] === 'replace_me');
   if (missing.length) throw new Error(`Missing environment values: ${missing.join(', ')}`);
-}
-
-function attributes(markup) {
-  return Object.fromEntries([...markup.matchAll(/([A-Za-z0-9_]+)="([^"]*)"/g)].map((match) => [match[1], match[2]]));
-}
-
-function parseSchedules(xml) {
-  const schedules = new Map();
-  for (const document of xml.split(/(?=<\?xml )/)) {
-    const match = document.match(/<schedule\s+([^>]+)>([\s\S]*?)<\/schedule>/);
-    if (!match) continue;
-    const service = attributes(match[1]);
-    const locations = [...match[2].matchAll(/<(?:ns2:)?(?:OR|IP|DT)\s+([^>]+)\/>/g)].map((item) => attributes(item[1]));
-    schedules.set(service.rid, {
-      operator: service.toc ?? null,
-      serviceId: service.trainId ?? null,
-      origin: locations[0]?.tpl ?? null,
-      destination: locations.at(-1)?.tpl ?? null
-    });
-  }
-  return schedules;
-}
-
-function parseDepartures(xml, stationCode) {
-  const schedules = parseSchedules(xml);
-  const departures = [];
-  for (const document of xml.split(/(?=<\?xml )/)) {
-    const trainStatus = document.match(/<TS\s+([^>]+)>([\s\S]*?)<\/TS>/);
-    if (!trainStatus) continue;
-    const train = attributes(trainStatus[1]);
-    const locationPattern = new RegExp(`<ns5:Location\\s+([^>]*\\btpl="${stationCode}"[^>]*)>([\\s\\S]*?)<\\/ns5:Location>`, 'g');
-    for (const locationMatch of trainStatus[2].matchAll(locationPattern)) {
-      const location = attributes(locationMatch[1]);
-      const departure = locationMatch[2].match(/<ns5:dep\s+([^/>]*)\/>/);
-      if (!location.ptd || !departure) continue;
-      const prediction = attributes(departure[1]);
-      const platform = locationMatch[2].match(/<ns5:plat[^>]*>([^<]+)<\/ns5:plat>/)?.[1] ?? null;
-      departures.push({
-        station: stationCode,
-        scheduledTime: location.ptd,
-        expectedTime: prediction.et ?? prediction.at ?? null,
-        platform,
-        predictionSource: prediction.src ?? null,
-        runId: train.rid,
-        journeyId: train.uid,
-        ...schedules.get(train.rid)
-      });
-    }
-  }
-  return departures.sort((a, b) => a.scheduledTime.localeCompare(b.scheduledTime));
 }
 
 async function downloadSnapshot() {
@@ -91,7 +42,7 @@ async function downloadSnapshot() {
   });
   await rename(temporaryFile, snapshotFile);
   const xml = gunzipSync(readFileSync(snapshotFile)).toString('utf8');
-  const departures = parseDepartures(xml, station);
+  const departures = parseDarwinDepartures(xml, station);
   const board = { generatedAt: new Date().toISOString(), station, departures };
   writeFileSync(boardFile, `${JSON.stringify(board, null, 2)}\n`);
   console.log(`Saved ${departures.length} ${station} departures to ${boardFile}`);
@@ -109,6 +60,16 @@ async function listenToTopic(durationMs) {
     ? process.env.DARWIN_LIVE_FEED_TOPIC
     : `/topic/${process.env.DARWIN_LIVE_FEED_TOPIC}`;
   const status = { startedAt: new Date().toISOString(), topic, messageCount: 0, compressedMessageCount: 0, lastMessageAt: null };
+  let board = { station, departures: [] };
+  if (existsSync(boardFile)) {
+    try {
+      board = JSON.parse(readFileSync(boardFile, 'utf8'));
+    } catch {
+      // Start from an empty board if the previous cache is corrupt.
+    }
+  }
+  let appliedUpdateCount = 0;
+  let parseErrorCount = 0;
   await new Promise((resolve, reject) => {
     const socket = connectTls({ host: process.env.DARWIN_MESSAGING_HOST, port: Number(process.env.DARWIN_STOMP_PORT), rejectUnauthorized: true });
     let connected = false;
@@ -135,13 +96,27 @@ async function listenToTopic(durationMs) {
           status.messageCount += 1;
           status.lastMessageAt = new Date().toISOString();
           if (body.subarray(0, 2).equals(Buffer.from([0x1f, 0x8b]))) status.compressedMessageCount += 1;
+          try {
+            const message = body.subarray(0, 2).equals(Buffer.from([0x1f, 0x8b])) ? gunzipSync(body) : body;
+            const updates = parseDarwinDepartures(message.toString('utf8'), station);
+            if (updates.length) {
+              board.departures = mergeDarwinDepartures(board.departures ?? [], updates);
+              board.generatedAt = new Date().toISOString();
+              appliedUpdateCount += updates.length;
+            }
+          } catch {
+            parseErrorCount += 1;
+          }
         }
       }
     });
     socket.on('error', (error) => { clearTimeout(timer); reject(error); });
     socket.on('close', () => { if (!connected) reject(new Error('Darwin topic closed before STOMP connected')); });
   });
+  status.appliedUpdateCount = appliedUpdateCount;
+  status.parseErrorCount = parseErrorCount;
   status.finishedAt = new Date().toISOString();
+  if (appliedUpdateCount) writeFileSync(boardFile, `${JSON.stringify(board, null, 2)}\n`);
   writeFileSync(topicStatusFile, `${JSON.stringify(status, null, 2)}\n`);
   console.log(`Darwin topic: ${status.messageCount} messages in ${durationMs / 1000}s`);
   return status;

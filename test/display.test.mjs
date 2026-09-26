@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildDisplayResponse, validateConfig } from '../src/display-contract.mjs';
 import { hasValidBearerToken } from '../src/auth.mjs';
-import { mergeTransportData, normaliseDepartures } from '../src/transport-data.mjs';
+import { mergeTransportData, normaliseDepartures, parseSiriVmDepartures } from '../src/transport-data.mjs';
 
 const data = { generatedAt: '2026-09-25T07:00:00Z', freshness: 'fixture', departures: [{ line: '2', destination: 'Rugby Gateway', scheduledTime: '07:13', expectedTime: '07:16', delayMinutes: 3, status: 'live', stopId: 's1', direction: 'Northbound' }, { line: '1', destination: 'Merlin Close', scheduledTime: '07:43', delayMinutes: 0, status: 'scheduled', stopId: 's1', direction: 'Northbound' }] };
 
@@ -58,4 +58,10 @@ test('accepts only an exact bearer token', () => {
   assert.equal(hasValidBearerToken({ authorization: 'Bearer wrong-token' }, 'secret-token'), false);
   assert.equal(hasValidBearerToken({}, 'secret-token'), false);
   assert.equal(hasValidBearerToken({ authorization: 'Bearer secret-token' }, ''), false);
+});
+
+test('parses a raw SIRI-VM stop visit', () => {
+  const [departure] = parseSiriVmDepartures(`<?xml version="1.0"?><Siri><ServiceDelivery><StopMonitoringDelivery><MonitoredStopVisit><MonitoringRef>4200F057700</MonitoringRef><MonitoredVehicleJourney><LineRef>2</LineRef><PublishedLineName>2</PublishedLineName><DirectionRef>Northbound</DirectionRef><DestinationName>Rugby Gateway</DestinationName><VehicleJourneyRef>journey-2</VehicleJourneyRef><MonitoredCall><StopPointRef>4200F057700</StopPointRef><AimedDepartureTime>2026-09-27T07:13:00+01:00</AimedDepartureTime><ExpectedDepartureTime>2026-09-27T07:16:00+01:00</ExpectedDepartureTime></MonitoredCall></MonitoredVehicleJourney></MonitoredStopVisit></StopMonitoringDelivery></ServiceDelivery></Siri>`, '4200F057700');
+  assert.deepEqual({ line: departure.line, destination: departure.destination, stopId: departure.stopId, direction: departure.direction }, { line: '2', destination: 'Rugby Gateway', stopId: '4200F057700', direction: 'Northbound' });
+  assert.equal(departure.status, 'live');
 });

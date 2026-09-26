@@ -1,4 +1,7 @@
 import { readJson, writeJson } from './display-contract.mjs';
+import GtfsRealtimeBindings from 'gtfs-realtime-bindings';
+
+const FeedMessage = GtfsRealtimeBindings.transit_realtime.FeedMessage;
 
 function asArray(value) {
   if (Array.isArray(value)) return value;
@@ -44,6 +47,44 @@ export function parseSiriVmDepartures(xml, stopId = null) {
       direction: xmlText(journey, 'DirectionRef')
     };
   }).filter((departure) => departure.scheduledTime && (!stopId || departure.stopId === stopId));
+}
+
+function epochSecondsToIso(value) {
+  const seconds = Number(value);
+  return Number.isFinite(seconds) ? new Date(seconds * 1000).toISOString() : null;
+}
+
+export function parseGtfsRealtimeDepartures(buffer, stopId = null) {
+  const feed = FeedMessage.decode(buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer));
+  const departures = [];
+  for (const entity of feed.entity ?? []) {
+    const update = entity.tripUpdate;
+    if (!update) continue;
+    const trip = update.trip ?? {};
+    for (const stopTime of update.stopTimeUpdate ?? []) {
+      if (stopId && stopTime.stopId !== stopId) continue;
+      const event = stopTime.departure ?? stopTime.arrival;
+      if (!event?.time) continue;
+      const expectedEpoch = Number(event.time);
+      const delaySeconds = Number(event.delay ?? 0);
+      const scheduledEpoch = expectedEpoch - delaySeconds;
+      const expectedTime = epochSecondsToIso(expectedEpoch);
+      const scheduledTime = epochSecondsToIso(scheduledEpoch);
+      departures.push({
+        mode: 'bus',
+        line: trip.routeId ?? '—',
+        serviceId: trip.tripId ?? null,
+        destination: trip.tripId ?? 'Unknown destination',
+        scheduledTime,
+        expectedTime,
+        delayMinutes: Math.round(delaySeconds / 60),
+        status: 'live',
+        stopId: stopTime.stopId ?? null,
+        direction: trip.directionId == null ? null : String(trip.directionId)
+      });
+    }
+  }
+  return departures.filter((departure) => departure.scheduledTime);
 }
 
 function minutesBetween(scheduled, expected) {

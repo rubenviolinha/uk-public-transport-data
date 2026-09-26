@@ -15,6 +15,7 @@
     "darwin:watch": "node scripts/darwin-poller.mjs watch"
   },
   "dependencies": {
+    "gtfs-realtime-bindings": "^2.2.0",
     "ssh2": "^1.16.0"
   }
 }

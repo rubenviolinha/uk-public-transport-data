@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import GtfsRealtimeBindings from 'gtfs-realtime-bindings';
 import { buildDisplayResponse, validateConfig } from '../src/display-contract.mjs';
 import { hasValidBearerToken } from '../src/auth.mjs';
-import { mergeTransportData, normaliseDepartures, parseSiriVmDepartures } from '../src/transport-data.mjs';
+import { mergeTransportData, normaliseDepartures, parseGtfsRealtimeDepartures, parseSiriVmDepartures } from '../src/transport-data.mjs';
 
 const data = { generatedAt: '2026-09-25T07:00:00Z', freshness: 'fixture', departures: [{ line: '2', destination: 'Rugby Gateway', scheduledTime: '07:13', expectedTime: '07:16', delayMinutes: 3, status: 'live', stopId: 's1', direction: 'Northbound' }, { line: '1', destination: 'Merlin Close', scheduledTime: '07:43', delayMinutes: 0, status: 'scheduled', stopId: 's1', direction: 'Northbound' }] };
 
@@ -64,4 +65,17 @@ test('parses a raw SIRI-VM stop visit', () => {
   const [departure] = parseSiriVmDepartures(`<?xml version="1.0"?><Siri><ServiceDelivery><StopMonitoringDelivery><MonitoredStopVisit><MonitoringRef>4200F057700</MonitoringRef><MonitoredVehicleJourney><LineRef>2</LineRef><PublishedLineName>2</PublishedLineName><DirectionRef>Northbound</DirectionRef><DestinationName>Rugby Gateway</DestinationName><VehicleJourneyRef>journey-2</VehicleJourneyRef><MonitoredCall><StopPointRef>4200F057700</StopPointRef><AimedDepartureTime>2026-09-27T07:13:00+01:00</AimedDepartureTime><ExpectedDepartureTime>2026-09-27T07:16:00+01:00</ExpectedDepartureTime></MonitoredCall></MonitoredVehicleJourney></MonitoredStopVisit></StopMonitoringDelivery></ServiceDelivery></Siri>`, '4200F057700');
   assert.deepEqual({ line: departure.line, destination: departure.destination, stopId: departure.stopId, direction: departure.direction }, { line: '2', destination: 'Rugby Gateway', stopId: '4200F057700', direction: 'Northbound' });
   assert.equal(departure.status, 'live');
+});
+
+test('parses a GTFS-RT trip update into a delayed departure', () => {
+  const { FeedMessage } = GtfsRealtimeBindings.transit_realtime;
+  const feed = FeedMessage.fromObject({
+    header: { gtfsRealtimeVersion: '2.0', timestamp: 1760000000 },
+    entity: [{ id: 'entity-1', tripUpdate: { trip: { tripId: 'trip-2', routeId: '2', directionId: 1 }, stopTimeUpdate: [{ stopId: '4200F057700', departure: { time: '1760000000', delay: 180 } }] } }]
+  });
+  const [departure] = parseGtfsRealtimeDepartures(FeedMessage.encode(feed).finish(), '4200F057700');
+  assert.equal(departure.line, '2');
+  assert.equal(departure.serviceId, 'trip-2');
+  assert.equal(departure.delayMinutes, 3);
+  assert.equal(departure.direction, '1');
 });

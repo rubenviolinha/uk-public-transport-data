@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadDotEnv } from '../src/env.mjs';
-import { mergeTransportData, parseSiriVmDepartures, readDarwinBoard, writeDisplayCache } from '../src/transport-data.mjs';
+import { mergeTransportData, parseGtfsRealtimeDepartures, parseSiriVmDepartures, readDarwinBoard, writeDisplayCache } from '../src/transport-data.mjs';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 loadDotEnv(join(root, '.env'));
@@ -15,9 +15,12 @@ async function fetchBus() {
   const timeoutMs = Math.max(Number(process.env.BODS_FETCH_TIMEOUT_SECONDS ?? 10), 1) * 1000;
   const response = await fetch(busUrl, { signal: AbortSignal.timeout(timeoutMs), headers: process.env.BODS_API_KEY ? { 'x-api-key': process.env.BODS_API_KEY, authorization: `Bearer ${process.env.BODS_API_KEY}` } : undefined });
   if (!response.ok) throw new Error(`BODS request failed: ${response.status}`);
-  const payload = await response.text();
-  if ((response.headers.get('content-type') ?? '').includes('json') || payload.trim().startsWith('{') || payload.trim().startsWith('[')) return JSON.parse(payload);
-  return { departures: parseSiriVmDepartures(payload, process.env.BODS_STOP_ID ?? null) };
+  const payload = Buffer.from(await response.arrayBuffer());
+  const contentType = response.headers.get('content-type') ?? '';
+  const text = payload.toString('utf8').trimStart();
+  if (contentType.includes('json') || text.startsWith('{') || text.startsWith('[')) return JSON.parse(text);
+  if (contentType.includes('xml') || text.startsWith('<')) return { departures: parseSiriVmDepartures(text, process.env.BODS_STOP_ID ?? null) };
+  return { departures: parseGtfsRealtimeDepartures(payload, process.env.BODS_STOP_ID ?? null) };
 }
 
 async function poll() {

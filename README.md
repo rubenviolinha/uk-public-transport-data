@@ -85,7 +85,7 @@ Set `DISPLAY_DATA_FILE` to a normalised cached data file when connecting the API
 
 ### Connect live bus and rail data
 
-`display:poll` loads `.env`, merges BODS departures with the Darwin board written by `darwin:snapshot`, and writes the display cache. `BODS_DEPARTURES_URL` may return the normalised JSON shape documented in `.env.example` or a raw SIRI-VM XML response; the latter is parsed into stop departures using `BODS_STOP_ID`. Full timetable matching and GTFS-RT ingestion remain follow-ups. Configure the URL and optional `BODS_API_KEY`, then run:
+`display:poll` loads `.env`, merges BODS departures with the Darwin board written by `darwin:snapshot`, and writes the display cache. `BODS_DEPARTURES_URL` may return the normalised JSON shape documented in `.env.example`, raw SIRI-VM XML, or GTFS-RT protobuf. SIRI and GTFS-RT responses are parsed into stop departures using `BODS_STOP_ID`. Configure the URL and optional `BODS_API_KEY`, then run:
 
 ```bash
 npm run darwin:snapshot
@@ -161,7 +161,7 @@ ignored by Git.
 
 ## Next build steps
 
-1. Add BODS timetable matching and GTFS-RT ingestion for journey-level predictions.
+1. Add static BODS timetable matching so GTFS-RT predictions can be checked against the published schedule.
 2. Run the multi-day Rugby pilot and record freshness, delay accuracy and recovery results.
 3. Add HTTPS and customer-level API/device authorisation before exposing the service beyond a trusted LAN.
 

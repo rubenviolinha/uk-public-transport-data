@@ -2,6 +2,10 @@ function attributes(markup) {
   return Object.fromEntries([...markup.matchAll(/([A-Za-z0-9_]+)="([^"]*)"/g)].map((match) => [match[1], match[2]]));
 }
 
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function parseSchedules(xml) {
   const schedules = new Map();
   for (const document of xml.split(/(?=<\?xml )/)) {
@@ -26,7 +30,7 @@ export function parseDarwinDepartures(xml, stationCode) {
     const trainStatus = document.match(/<TS\s+([^>]+)>([\s\S]*?)<\/TS>/);
     if (!trainStatus) continue;
     const train = attributes(trainStatus[1]);
-    const locationPattern = new RegExp(`<ns5:Location\\s+([^>]*\\btpl="${stationCode}"[^>]*)>([\\s\\S]*?)<\\/ns5:Location>`, 'g');
+    const locationPattern = new RegExp(`<ns5:Location\\s+([^>]*\\btpl="${escapeRegExp(stationCode)}"[^>]*)>([\\s\\S]*?)<\\/ns5:Location>`, 'g');
     for (const locationMatch of trainStatus[2].matchAll(locationPattern)) {
       const location = attributes(locationMatch[1]);
       const departure = locationMatch[2].match(/<ns5:dep\s+([^/>]*)\/>/);

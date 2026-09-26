@@ -99,7 +99,7 @@ If neither `BODS_DEPARTURES_URL` nor a Darwin board exists, polling fails with a
 
 ### Validate a pilot run
 
-The ESP32 sketch uses `TFT_eSPI`; configure that library for the selected 4–5 inch module, then upload `firmware/esp32/display_client.ino`. It renders the stop, freshness state, route, expected time, destination and delay on the TFT and retains the last good frame when refresh fails. The reference server is intended for a trusted local network; it has no authentication or HTTPS yet.
+The ESP32 sketch uses `TFT_eSPI`; configure that library for the selected 4–5 inch module, then upload `firmware/esp32/display_client.ino`. It renders the stop, freshness state, route, expected time, destination and delay on the TFT and retains the last good frame when refresh fails. In production, put the display API behind HTTPS and customer/device authentication; the built-in admin token protects configuration endpoints, while display reads are intentionally simple for local devices.
 
 With the API running, `npm run display:validate` records one sample. Set `VALIDATION_DURATION_SECONDS` and `VALIDATION_INTERVAL_SECONDS` for a longer run; samples are written as JSON Lines to `data/validation/display-samples.jsonl` and include latency, stale state, departure count, HTTP status and errors.
 
@@ -155,8 +155,9 @@ npm run darwin:topic
 ```
 
 `darwin:snapshot` writes a normalised Rugby departure board to
-`data/darwin/rugby-departures.json`. `darwin:topic` records the count and
-timestamps of incremental Darwin updates. Generated data is ignored by Git.
+`data/darwin/rugby-departures.json`. `darwin:topic` applies parsed incremental
+updates to that board and records message/parse health. Generated data is
+ignored by Git.
 
 ## Next build steps
 

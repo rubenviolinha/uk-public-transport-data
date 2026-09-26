@@ -26,7 +26,8 @@ live disruption rather than merely a static timetable.
 2. Match the `RUGBY` location records to the associated schedule records by
    `rid` to obtain service details and destination.
 3. Subscribe to the Darwin STOMP live-feed topic in production, applying its
-   incremental updates between snapshots.
+   parsed incremental updates between snapshots. The repository's topic poller
+   merges updates that contain a matching `rid` or `uid` into the board.
 4. Translate TIPLOCs to public station names using the National Rail reference
    data before rendering the display.
 

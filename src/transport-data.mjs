@@ -74,7 +74,7 @@ export function parseGtfsRealtimeDepartures(buffer, stopId = null) {
         mode: 'bus',
         line: trip.routeId ?? '—',
         serviceId: trip.tripId ?? null,
-        destination: trip.tripId ?? 'Unknown destination',
+        destination: 'Unknown destination',
         scheduledTime,
         expectedTime,
         delayMinutes: Math.round(delaySeconds / 60),

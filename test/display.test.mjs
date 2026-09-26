@@ -77,6 +77,7 @@ test('parses a GTFS-RT trip update into a delayed departure', () => {
   const [departure] = parseGtfsRealtimeDepartures(FeedMessage.encode(feed).finish(), '4200F057700');
   assert.equal(departure.line, '2');
   assert.equal(departure.serviceId, 'trip-2');
+  assert.equal(departure.destination, 'Unknown destination');
   assert.equal(departure.delayMinutes, 3);
   assert.equal(departure.direction, '1');
 });

@@ -24,8 +24,16 @@ export function loadConfigStore(file) {
 }
 
 export function buildDisplayResponse({ data, config, now = new Date() }) {
-  const departures = (data.departures ?? [])
-    .filter((departure) => !config.route || departure.line === config.route || departure.serviceId === config.route)
+  const sourceDepartures = data.departures ?? [];
+  const hasStopMetadata = sourceDepartures.some((departure) => departure.stopId);
+  const hasDirectionMetadata = sourceDepartures.some((departure) => departure.direction);
+  const departures = sourceDepartures
+    .filter((departure) => {
+      const stopMatches = !hasStopMetadata || String(departure.stopId) === String(config.stopId);
+      const directionMatches = !hasDirectionMetadata || (Boolean(departure.direction) && Boolean(config.direction) && departure.direction.toLowerCase() === config.direction.toLowerCase());
+      const routeMatches = !config.route || departure.line === config.route || departure.serviceId === config.route;
+      return stopMatches && directionMatches && routeMatches;
+    })
     .map((departure) => ({
       line: departure.line ?? departure.serviceId ?? '—',
       destination: departure.destination ?? 'Unknown destination',
@@ -43,6 +51,7 @@ export function buildDisplayResponse({ data, config, now = new Date() }) {
     freshness: data.freshness ?? 'fixture',
     stale: Boolean(data.stale),
     stop: { id: config.stopId, name: config.stopName, direction: config.direction },
+    attribution: 'Bus data: Department for Transport Bus Open Data Service (BODS); rail data: National Rail Darwin',
     departures
   };
 }

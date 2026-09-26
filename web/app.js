@@ -2,13 +2,42 @@ const deviceId = 'demo-display';
 const $ = (id) => document.getElementById(id);
 const dialog = $('configDialog');
 
+function textElement(tag, className, text) {
+  const element = document.createElement(tag);
+  element.className = className;
+  element.textContent = text;
+  return element;
+}
+
+function renderDepartures(departures) {
+  const container = $('departures');
+  container.replaceChildren();
+  if (!departures.length) {
+    container.append(textElement('p', 'empty', 'No departures found for this display.'));
+    return;
+  }
+  for (const item of departures) {
+    const article = textElement('article', 'departure', '');
+    article.append(textElement('div', 'line', item.line));
+    const details = textElement('div', 'details', '');
+    details.append(textElement('strong', '', item.destination));
+    details.append(textElement('span', '', `${item.status}${item.platform ? ` · platform ${item.platform}` : ''}`));
+    article.append(details);
+    const time = textElement('div', 'time', '');
+    time.append(textElement('strong', '', item.expectedTime));
+    time.append(textElement('span', '', item.delayMinutes > 0 ? `+${item.delayMinutes} min` : item.scheduledTime));
+    article.append(time);
+    container.append(article);
+  }
+}
+
 function render(data) {
   $('stop').textContent = data.stop.name;
   $('direction').textContent = data.stop.direction;
   $('freshness').textContent = `Updated ${new Date(data.generatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
   $('status').textContent = data.stale ? 'Data may be out of date' : `${data.departures.length} upcoming departures`;
   $('status').className = `status ${data.stale ? 'warning' : ''}`;
-  $('departures').innerHTML = data.departures.length ? data.departures.map((item) => `<article class="departure"><div class="line">${item.line}</div><div class="details"><strong>${item.destination}</strong><span>${item.status}${item.platform ? ` · platform ${item.platform}` : ''}</span></div><div class="time"><strong>${item.expectedTime}</strong><span>${item.delayMinutes > 0 ? `+${item.delayMinutes} min` : item.scheduledTime}</span></div></article>`).join('') : '<p class="empty">No departures found for this display.</p>';
+  renderDepartures(data.departures);
 }
 
 async function refresh() {

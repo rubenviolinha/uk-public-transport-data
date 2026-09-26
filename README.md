@@ -85,7 +85,7 @@ Set `DISPLAY_DATA_FILE` to a normalised cached data file when connecting the API
 
 ### Connect live bus and rail data
 
-`display:poll` merges a normalised BODS departures response with the Darwin board written by `darwin:snapshot`. Configure `BODS_DEPARTURES_URL` and the optional `BODS_API_KEY`, then run:
+`display:poll` loads `.env`, merges a normalised BODS departures response with the Darwin board written by `darwin:snapshot`, and writes the display cache. `BODS_DEPARTURES_URL` must point to an endpoint returning the normalised shape documented in `.env.example`; raw BODS timetable/live-vehicle ingestion is still a follow-up. Configure the URL and optional `BODS_API_KEY`, then run:
 
 ```bash
 npm run darwin:snapshot
@@ -95,9 +95,11 @@ npm run display
 
 For continuous cache refresh, use `npm run display:watch`. If an upstream request fails, the last successful cache is retained and marked `stale: true`, so the display can keep showing known data instead of going blank.
 
+If neither `BODS_DEPARTURES_URL` nor a Darwin board exists, polling fails with an unavailable/stale cache rather than claiming that an empty result is live.
+
 ### Validate a pilot run
 
-The ESP32 sketch uses `TFT_eSPI`; configure that library for the selected 4–5 inch module, then upload `firmware/esp32/display_client.ino`. It renders the stop, freshness state, route, expected time, destination and delay on the TFT and retains the last good frame when refresh fails.
+The ESP32 sketch uses `TFT_eSPI`; configure that library for the selected 4–5 inch module, then upload `firmware/esp32/display_client.ino`. It renders the stop, freshness state, route, expected time, destination and delay on the TFT and retains the last good frame when refresh fails. The reference server is intended for a trusted local network; it has no authentication or HTTPS yet.
 
 With the API running, `npm run display:validate` records one sample. Set `VALIDATION_DURATION_SECONDS` and `VALIDATION_INTERVAL_SECONDS` for a longer run; samples are written as JSON Lines to `data/validation/display-samples.jsonl` and include latency, stale state, departure count, HTTP status and errors.
 
@@ -106,6 +108,13 @@ With the API running, `npm run display:validate` records one sample. Set `VALIDA
 1. Copy `.env.example` to `.env`.
 2. Put your BODS API key in `BODS_API_KEY`.
 3. Never commit `.env` or an API key.
+
+## Hosting
+
+The API can run in a container or on a small VPS, while the poller runs as a
+separate worker using the same server-side environment. See [the hosting guide](docs/hosting.md)
+for the container example, persistent-cache requirements, and the security and
+licensing checks required before offering paid access.
 
 ## Train data: Rugby station
 
@@ -130,9 +139,10 @@ Darwin STOMP live topic ─> incremental delay, platform and service updates
                               └──> normalised public-transport data API
 ```
 
-The snapshot provides a complete starting state. The live topic is then used to
-keep that state current between refreshes. See [the Darwin pilot notes](docs/darwin-pilot.md)
-for the tested result and integration approach.
+The snapshot provides a complete starting state. The current topic command records
+incremental message health but does not yet apply those updates to the cached
+departure board; that merge is a remaining integration task. See [the Darwin pilot
+notes](docs/darwin-pilot.md) for the tested result and integration approach.
 
 ### Run the railway poller
 
@@ -150,13 +160,10 @@ timestamps of incremental Darwin updates. Generated data is ignored by Git.
 
 ## Next build steps
 
-1. Download and normalise the timetable for services 1 and 2.
-2. Poll and cache BODS live positions every 15–30 seconds.
-3. Refresh and cache the Darwin snapshot, applying live-topic updates between
-   refreshes.
-4. Connect the display API to the live BODS bus cache and Darwin snapshot/topic updater.
-5. Add a hardware-specific renderer for the selected ESP32 display module.
-6. Run the multi-day Rugby pilot and record freshness, delay accuracy and recovery results.
+1. Complete raw BODS timetable/live-vehicle ingestion and journey matching.
+2. Apply Darwin live-topic updates to the cached departure board.
+3. Run the multi-day Rugby pilot and record freshness, delay accuracy and recovery results.
+4. Add authentication/HTTPS and device authorisation before exposing the API beyond a trusted LAN.
 
 ## Notes
 

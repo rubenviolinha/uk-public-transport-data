@@ -1,9 +1,11 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { loadDotEnv } from '../src/env.mjs';
 import { mergeTransportData, readDarwinBoard, writeDisplayCache } from '../src/transport-data.mjs';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
+loadDotEnv(join(root, '.env'));
 const cacheFile = resolve(process.env.DISPLAY_DATA_FILE ?? join(root, 'data', 'cache', 'display.json'));
 const darwinFile = resolve(process.env.DARWIN_BOARD_FILE ?? join(root, 'data', 'darwin', 'rugby-departures.json'));
 const busUrl = process.env.BODS_DEPARTURES_URL;
@@ -17,6 +19,7 @@ async function fetchBus() {
 
 async function poll() {
   try {
+    if (!busUrl && !existsSync(darwinFile)) throw new Error('No transport sources configured; set BODS_DEPARTURES_URL or run darwin:snapshot first');
     const bus = await fetchBus();
     const rail = existsSync(darwinFile) ? readDarwinBoard(darwinFile) : { departures: [] };
     const result = mergeTransportData({ bus, rail, generatedAt: new Date().toISOString() });
@@ -24,7 +27,14 @@ async function poll() {
     console.log(`Saved ${result.departures.length} departures to ${cacheFile}`);
     return result;
   } catch (error) {
-    const existing = existsSync(cacheFile) ? JSON.parse(readFileSync(cacheFile, 'utf8')) : { generatedAt: new Date().toISOString(), freshness: 'unavailable', departures: [] };
+    let existing = { generatedAt: new Date().toISOString(), freshness: 'unavailable', departures: [] };
+    if (existsSync(cacheFile)) {
+      try {
+        existing = JSON.parse(readFileSync(cacheFile, 'utf8'));
+      } catch {
+        // Treat an empty or corrupt cache as unavailable, while still recording the cause below.
+      }
+    }
     const stale = { ...existing, stale: true, staleReason: error.message };
     writeDisplayCache(cacheFile, stale);
     console.error(`Display data is stale: ${error.message}`);

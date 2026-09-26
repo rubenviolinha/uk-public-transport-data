@@ -4,6 +4,7 @@ import { mkdir, rename } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { connect as connectTls } from 'node:tls';
 import { gunzipSync } from 'node:zlib';
+import { loadDotEnv } from '../src/env.mjs';
 
 const projectRoot = process.cwd();
 const outputDirectory = join(projectRoot, 'data', 'darwin');
@@ -11,15 +12,6 @@ const snapshotFile = join(outputDirectory, 'snapshot.gz');
 const boardFile = join(outputDirectory, 'rugby-departures.json');
 const topicStatusFile = join(outputDirectory, 'live-topic-status.json');
 const station = process.env.DARWIN_STATION ?? 'RUGBY';
-
-function loadEnv() {
-  const file = join(projectRoot, '.env');
-  if (!existsSync(file)) return;
-  for (const line of readFileSync(file, 'utf8').split(/\r?\n/)) {
-    const match = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/);
-    if (match && !process.env[match[1]]) process.env[match[1]] = match[2].replace(/^['"]|['"]$/g, '');
-  }
-}
 
 function requireEnv(...names) {
   const missing = names.filter((name) => !process.env[name] || process.env[name] === 'replace_me');
@@ -155,7 +147,7 @@ async function listenToTopic(durationMs) {
   return status;
 }
 
-loadEnv();
+loadDotEnv(join(projectRoot, '.env'));
 const command = process.argv[2] ?? 'snapshot';
 if (command === 'snapshot') await downloadSnapshot();
 else if (command === 'topic') await listenToTopic(Number(process.env.DARWIN_TOPIC_TEST_SECONDS ?? 60) * 1000);

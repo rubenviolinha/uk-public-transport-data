@@ -9,9 +9,11 @@ const char *DISPLAY_API = "http://192.168.1.10:8787/api/v1/display?deviceId=demo
 unsigned long lastRefresh = 0;
 const unsigned long REFRESH_MS = 30000;
 TFT_eSPI tft = TFT_eSPI();
+bool hasGoodDisplay = false;
 
 void renderFallback(const char *message) {
   Serial.printf("DISPLAY: %s\n", message);
+  if (hasGoodDisplay) return;
   tft.fillScreen(TFT_BLACK);
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
   tft.setTextSize(2);
@@ -50,6 +52,7 @@ void renderDisplay(JsonDocument &document) {
     y += 42;
     tft.setTextSize(2);
   }
+  hasGoodDisplay = true;
 }
 
 bool refreshDisplay() {

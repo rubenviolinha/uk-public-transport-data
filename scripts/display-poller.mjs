@@ -12,7 +12,8 @@ const busUrl = process.env.BODS_DEPARTURES_URL;
 
 async function fetchBus() {
   if (!busUrl) return { departures: [] };
-  const response = await fetch(busUrl, { headers: process.env.BODS_API_KEY ? { 'x-api-key': process.env.BODS_API_KEY, authorization: `Bearer ${process.env.BODS_API_KEY}` } : undefined });
+  const timeoutMs = Math.max(Number(process.env.BODS_FETCH_TIMEOUT_SECONDS ?? 10), 1) * 1000;
+  const response = await fetch(busUrl, { signal: AbortSignal.timeout(timeoutMs), headers: process.env.BODS_API_KEY ? { 'x-api-key': process.env.BODS_API_KEY, authorization: `Bearer ${process.env.BODS_API_KEY}` } : undefined });
   if (!response.ok) throw new Error(`BODS request failed: ${response.status}`);
   const payload = await response.text();
   if ((response.headers.get('content-type') ?? '').includes('json') || payload.trim().startsWith('{') || payload.trim().startsWith('[')) return JSON.parse(payload);

@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 export const defaultConfig = {
@@ -16,7 +16,9 @@ export function readJson(file, fallback) {
 
 export function writeJson(file, value) {
   mkdirSync(dirname(file), { recursive: true });
-  writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`);
+  const temporaryFile = `${file}.${process.pid}.tmp`;
+  writeFileSync(temporaryFile, `${JSON.stringify(value, null, 2)}\n`);
+  renameSync(temporaryFile, file);
 }
 
 export function loadConfigStore(file) {

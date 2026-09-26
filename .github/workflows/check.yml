@@ -16,3 +16,9 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm test
+
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build --tag uk-public-transport-data:ci .

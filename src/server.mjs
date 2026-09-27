@@ -13,7 +13,9 @@ const port = Number(process.env.PORT ?? 8787);
 const fixtureFile = resolve(process.env.DISPLAY_DATA_FILE ?? (existsSync(join(root, 'data', 'cache', 'display.json')) ? join(root, 'data', 'cache', 'display.json') : join(root, 'data', 'fixtures', 'display.json')));
 const configFile = resolve(process.env.DISPLAY_CONFIG_FILE ?? join(root, 'data', 'config', 'devices.json'));
 const staticRoot = join(root, 'web');
-const adminToken = process.env.DISPLAY_ADMIN_TOKEN;
+const adminToken = process.env.DISPLAY_ADMIN_TOKEN && process.env.DISPLAY_ADMIN_TOKEN !== 'replace_me'
+  ? process.env.DISPLAY_ADMIN_TOKEN
+  : undefined;
 let configs = loadConfigStore(configFile);
 
 function json(response, status, body) {
@@ -90,7 +92,9 @@ const server = createServer(async (request, response) => {
     }
     return serveStatic(request, response, url.pathname);
   } catch (error) {
-    return json(response, error.statusCode ?? 400, { error: error.message });
+    const status = error.statusCode ?? (process.env.NODE_ENV === 'production' ? 500 : 400);
+    const message = status >= 500 && process.env.NODE_ENV === 'production' ? 'request failed' : error.message;
+    return json(response, status, { error: message });
   }
 });
 

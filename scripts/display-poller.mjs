@@ -12,11 +12,12 @@ const cacheFile = resolve(process.env.DISPLAY_DATA_FILE ?? join(root, 'data', 'c
 const darwinFile = resolve(process.env.DARWIN_BOARD_FILE ?? join(root, 'data', 'darwin', 'rugby-departures.json'));
 const timetableFile = resolve(process.env.BODS_TIMETABLE_FILE ?? join(root, 'data', 'timetables', 'rugby.json'));
 const busUrl = process.env.BODS_DEPARTURES_URL;
+const bodsApiKey = process.env.BODS_API_KEY && process.env.BODS_API_KEY !== 'replace_me' ? process.env.BODS_API_KEY : undefined;
 
 async function fetchBus() {
   if (!busUrl) return { departures: [] };
   const timeoutMs = Math.max(Number(process.env.BODS_FETCH_TIMEOUT_SECONDS ?? 10), 1) * 1000;
-  const response = await fetch(busUrl, { signal: AbortSignal.timeout(timeoutMs), headers: process.env.BODS_API_KEY ? { 'x-api-key': process.env.BODS_API_KEY, authorization: `Bearer ${process.env.BODS_API_KEY}` } : undefined });
+  const response = await fetch(busUrl, { signal: AbortSignal.timeout(timeoutMs), headers: bodsApiKey ? { 'x-api-key': bodsApiKey, authorization: `Bearer ${bodsApiKey}` } : undefined });
   if (!response.ok) throw new Error(`BODS request failed: ${response.status}`);
   const payload = Buffer.from(await response.arrayBuffer());
   const contentType = response.headers.get('content-type') ?? '';
